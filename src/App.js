@@ -6,6 +6,7 @@ function App() {
 
   const handleSubmit = async (event) => {
   event.preventDefault();
+  document.getElementById('content').innerHTML = "";  //removes the previous content
 
     var patient;
     try{
@@ -13,6 +14,7 @@ function App() {
     }
     catch(error){
       console.log(error.message)
+      document.getElementById('errorMsg').innerHTML = `<b>Invalid JSON format: ${error.message}</b>`
       return;
     }
 
@@ -30,7 +32,6 @@ function App() {
     console.log(content); 
 
     if (!content){
-      document.getElementById('content').innerHTML = "";  //removes the previous content
       document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
       return;
     }else{
@@ -40,8 +41,14 @@ function App() {
 
 //Key validation------------------------------------------------------
 
-    const pattern = /field\s+'([^']+)'/;
-    const parserMatch = content.match(pattern);
+    const pattern = /field\s+'([^']+)'/g;
+    const parserMatch = content.matchAll(pattern);
+
+    // console.log("=======================")
+    // for (const match of parserMatch){
+    //   console.log(match)
+    // }
+    // console.log("=======================")
 
     var fieldValue;
     if (parserMatch && parserMatch.length === 2) {
@@ -106,7 +113,7 @@ function findLineNo(obj, searchString=fieldValue, currentLine=0) {
 
     currentLine= currentLine + 1;
 
-    if(key === searchString){
+    if(key === searchString || key === ""){  //if key is empty string, then the error is with the resourceType
         let entries = Object.entries(obj);   //Similar to map
 
         // Iterate over the array
