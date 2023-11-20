@@ -4,33 +4,19 @@ import React, { useState } from 'react';
 function App() {
   const [value, setValue] = useState('');
 
-  const handleSubmit = async () => {
-    const patient = {
-                "resourceType": "Patient",
-                "id": "assaasca",
-                "gender": "male",
-                "name":[],
-                "birthDate": "1970-01-01",
-                "telecom": [
-                  {
-                    "system": "phone",
-                    "value": "(555) 555-5555"
-                  },
-                  {
-                    "system": "phone",
-                    "value": "(555) 555-5123555",
-                  }
-                ],
-                "address": [
-                  {
-                    "city": "Sunnyvale",
-                    "state": "CA",
-                    "postalCode": "94043"
-                  }
-                ],
-            };
+  const handleSubmit = async (event) => {
+  event.preventDefault();
 
+    var patient;
+    try{
+      patient = JSON.parse(value)
+    }
+    catch(error){
+      console.log(error.message)
+      return;
+    }
 
+  console.log(patient);
 
 
     const data = {
@@ -40,7 +26,17 @@ function App() {
     };
     const response = await fetch('http://localhost:9090/sampleResource', data);
     const content = await response.text(); 
+    console.log("Error message from server");
     console.log(content); 
+
+    if (!content){
+      document.getElementById('content').innerHTML = "";  //removes the previous content
+      document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
+      return;
+    }else{
+      document.getElementById('errorMsg').innerHTML = `<b>${content}</b>`
+    }
+    
 
 //Key validation------------------------------------------------------
 
@@ -99,13 +95,7 @@ if (fieldValue){
 
 
 
-
-
-
-
-
-/*TODO - 1)Implement parsing for resource type
-         2)Implement parsing for constraints */
+/*TODO  2)Implement parsing for constraints */
 
 
     
@@ -184,11 +174,13 @@ document.getElementById('content').innerHTML = `<pre>${modifiedJsonStringg}</pre
 
   return (
     <div className="App">
-      {/* Fix the textarea tag */}
-      <textarea value={value} onChange={(event) => setValue(event.target.value)} />
-      <button onClick={handleSubmit}>Submit</button>
-      <div id='content'>
-
+      <div className='container'>
+        <form onSubmit={handleSubmit}>
+          <textarea value={value} onChange={(event) => setValue(event.target.value)} rows={28} cols={40} />
+          <button >Submit</button>
+        </form>
+        <div id='content'></div>     
+        <div id='errorMsg'></div>    
       </div>
     </div>
   );
