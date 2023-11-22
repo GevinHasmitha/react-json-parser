@@ -41,11 +41,11 @@ function App() {
 
 /*If the error is created by an invalid key, this will get the key where the error
   is from the error message, then this key can be used as the search string by the addPrefixToMatchingKey function*/
-    const pattern = /field\s+'([^']+)'/g;
-    const parserMatch = content.matchAll(pattern);
+    const pattern1 = /field\s+'([^']+)'/g;
+    const pattern1Match = content.matchAll(pattern1);
 
     var fieldValue = [];
-    for (const match of parserMatch){
+    for (const match of pattern1Match){
       if (match && match.length ===2){
         fieldValue.push(match[1]);
         console.log(`Field Value  ${fieldValue}`);
@@ -90,9 +90,9 @@ if (fieldValue){
 /*This will search error for below string and if there is a match the
 error is with the resourceType field*/ 
 var pattern3 = /(Failed to find FHIR profile for the resource type)/;
-const parserMatch2 = content.match(pattern3);
+const pattern3Match = content.match(pattern3);
 
-if (parserMatch2 && parserMatch2.length === 2) {
+if (pattern3Match && pattern3Match.length === 2) {
   fieldValue.push("resourceType");
   console.log(`Field Value : ${fieldValue}`);
 } else {
@@ -100,10 +100,14 @@ if (parserMatch2 && parserMatch2.length === 2) {
 }
 
 
+/*Parsing for dateTime errors*/
+var pattern4 = /\$\.(\w+):pattern/g;
+const pattern4Match = content.matchAll(pattern4);
 
+for( const match of pattern4Match){
+  fieldValue.push(match[1]);
+}
 
-
-/*TODO  2)Implement parsing for constraints */
 
 
     
