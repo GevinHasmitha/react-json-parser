@@ -8,9 +8,9 @@ function App() {
   event.preventDefault();
   document.getElementById('content').innerHTML = "";  //removes the previous content
 
-    var patient;
+    var userInputJson;
     try{
-      patient = JSON.parse(value)
+      userInputJson = JSON.parse(value)
     }
     catch(error){
       console.log(error.message)
@@ -18,13 +18,13 @@ function App() {
       return;
     }
 
-  console.log(patient);
+  console.log(userInputJson);
 
 
     const data = {
       method: 'POST',
         headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify(patient), 
+        body: JSON.stringify(userInputJson), 
     };
     const response = await fetch('http://localhost:9090/sampleResource', data);
     const content = await response.text(); 
@@ -39,8 +39,8 @@ function App() {
     }
     
 
-//Key validation------------------------------------------------------
-
+/*If the error is created by an invalid key, this will get the key where the error
+  is from the error message, then this key can be used as the search string by the addPrefixToMatchingKey function*/
     const pattern = /field\s+'([^']+)'/g;
     const parserMatch = content.matchAll(pattern);
 
@@ -55,9 +55,10 @@ function App() {
     }
 
 
-
-//Value validation------------------------------------------------------
-
+/*If the error is created by a value, below code is used to navigate to that field. Then it will directly 
+  add $$ to that value so calling the addPrefixToMatchingKey function is not needed (this can be done because if the error
+  is with a value, the error message will contain the path, if it is with a key, we have to use the 
+  addPrefixToMatchingKey function to search for the location of the key in the json)*/
 if (fieldValue){
     //Eg; if fieldValue is telecom[1].system, this regular expression will return an array ["telecom", 1, "system"]
     var pattern2 = /(\w+)\[(\d+)\]\.(\w+)/;
@@ -68,14 +69,14 @@ if (fieldValue){
 
           if (match !== null) {
             //Navigating to the value in the JSON object
-            const currentValue = patient[match[1]][match[2]][match[3]];
+            const currentValue = userInputJson[match[1]][match[2]][match[3]];
             console.log("currentValue = ", currentValue);
 
             const modifiedValue = "$$" + currentValue;
             console.log("modifiedValue = ", modifiedValue);
 
             // Update the value in the JSON object
-            patient[match[1]][match[2]][match[3]] = modifiedValue;
+            userInputJson[match[1]][match[2]][match[3]] = modifiedValue;
           }
     }
     } catch (error) {
@@ -107,7 +108,7 @@ if (parserMatch2 && parserMatch2.length === 2) {
 
     
 
-function findLineNo(obj, searchString, currentLine=0) {
+function addPrefixToMatchingKey(obj, searchString) {
 
   for (var key in obj) { 
 
@@ -131,17 +132,17 @@ function findLineNo(obj, searchString, currentLine=0) {
     /*Here if the current key has an object as the value, this will execute*/ 
     if(typeof obj[key] === 'object' ){
       /*If the current key's value is an array containing many objects, then the else will execute therby recursively executing 
-      findLineNo for each object in the array. But if the current key's value is just a simple object, the the "if" will run
-      executind findLineNo for the current object*/
+      addPrefixToMatchingKey for each object in the array. But if the current key's value is just a simple object, the the "if" will run
+      executind addPrefixToMatchingKey for the current object*/
        if(!Array.isArray(obj[key])){
 
-          var obj2 = findLineNo(obj[key], searchString, currentLine);
+          var obj2 = addPrefixToMatchingKey(obj[key], searchString);
           obj[key] = obj2;
 
       }else{    
           for( const arrayElementIndex  in obj[key]){
 
-             var obb = findLineNo(obj[key][arrayElementIndex ], searchString, currentLine);
+             var obb = addPrefixToMatchingKey(obj[key][arrayElementIndex ], searchString);
              obj[key][arrayElementIndex ] = obb;
 
           }  
@@ -158,19 +159,19 @@ for (const val of fieldValue){
   console.log(val)
 }
 
-const originalJSON = JSON.stringify(patient)
-console.log("------Original object--------");
-console.log(originalJSON);
+// const originalJSON = JSON.stringify(userInputJson)
+// console.log("------Original object--------");
+// console.log(originalJSON);
 
 
 var jsonAfterLoop;
 for (const field of fieldValue){
-  jsonAfterLoop= findLineNo(patient,field);
-  patient = jsonAfterLoop;
+  jsonAfterLoop= addPrefixToMatchingKey(userInputJson,field);
+  userInputJson = jsonAfterLoop;
 }
-const strAfterLoop = JSON.stringify(jsonAfterLoop)
-console.log("------FInal object--------");
-console.log(strAfterLoop);
+// const strAfterLoop = JSON.stringify(jsonAfterLoop)
+// console.log("------FInal object--------");
+// console.log(strAfterLoop);
 
 var jsonStringg = JSON.stringify(jsonAfterLoop, null, 2); // 2 is the number of spaces for indentation
 
