@@ -44,7 +44,7 @@ function App() {
     const pattern = /field\s+'([^']+)'/g;
     const parserMatch = content.matchAll(pattern);
 
-var fieldValue = [];
+    var fieldValue = [];
     for (const match of parserMatch){
       if (match && match.length ===2){
         fieldValue.push(match[1]);
@@ -84,7 +84,7 @@ if (fieldValue){
   }
 
 
-  //Resource type validation------------------------------------------------------
+//Resource type validation------------------------------------------------------
 
 /*This will search error for below string and if there is a match the
 error is with the resourceType field*/ 
@@ -131,11 +131,11 @@ function findLineNo(obj, searchString, currentLine=0) {
     /*Here if the current key has an object as the value, this will execute*/ 
     if(typeof obj[key] === 'object' ){
       /*If the current key's value is an array containing many objects, then the else will execute therby recursively executing 
-      findLineNo for each objject in the array. But if the current key's value is just a simple object, the the "if" will run
+      findLineNo for each object in the array. But if the current key's value is just a simple object, the the "if" will run
       executind findLineNo for the current object*/
        if(!Array.isArray(obj[key])){
 
-         var obj2 = findLineNo(obj[key], searchString, currentLine);
+          var obj2 = findLineNo(obj[key], searchString, currentLine);
           obj[key] = obj2;
 
       }else{    
