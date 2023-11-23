@@ -18,8 +18,6 @@ function App() {
       return;
     }
 
-  console.log(userInputJson);
-
 
     const data = {
       method: 'POST',
@@ -35,7 +33,23 @@ function App() {
       document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
       return;
     }else{
-      document.getElementById('errorMsg').innerHTML = `<b>${content}</b>`
+
+      // document.getElementById('errorMsg').innerHTML = `<b>${content}</b>`
+
+
+      var pattern5 = /'health\.fhir\.r4\.international401:Patient':\s*([\s\S]*)/;
+      const pattern5Match = content.match(pattern5)
+      const errorMessagesArray = pattern5Match[1].split("\n")
+      for(var i=0; i<errorMessagesArray.length; i++){
+        errorMessagesArray[i] = `<p>${errorMessagesArray[i]}</p>`
+      }
+      console.log("===========")
+      console.log(errorMessagesArray)
+      document.getElementById('errorMsg').innerHTML  = ""; //removes the previous content
+      for (const error of errorMessagesArray){
+        document.getElementById('errorMsg').innerHTML += `<b>${error}</b>`
+      }
+      
     }
     
 
@@ -128,8 +142,6 @@ function addPrefixToMatchingKey(obj, searchString) {
         } 
         // Convert array back to object
         obj = Object.fromEntries(entries);
-    
-        console.log(obj)
         return obj;
     }
 
@@ -181,7 +193,6 @@ var jsonStringg = JSON.stringify(jsonAfterLoop, null, 2); // 2 is the number of 
 
 if (jsonStringg){
     let linesArr = jsonStringg.split("\n");
-    console.log(linesArr);
 
     for (let i = 0; i < linesArr.length; i++){
       if (linesArr[i].includes("$$")){
@@ -190,7 +201,6 @@ if (jsonStringg){
 
       }
     }
-    console.log(linesArr);
     let modifiedJsonStringg = linesArr.join("\n");
     document.getElementById('content').innerHTML = `<pre>${modifiedJsonStringg}</pre>`;
     }
