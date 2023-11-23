@@ -29,31 +29,7 @@ function App() {
     console.log("Error message from server");
     console.log(content); 
 
-    if (!content){
-      document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
-      return;
-    }else{
-      document.getElementById('errorMsg').innerHTML  = ""; //removes the previous content
-
-      var pattern5 = /'health\.fhir\.r4\.international401:Patient':\s*([\s\S]*)/;
-      const pattern5Match = content.match(pattern5)
-
-      if (pattern5Match !== null){
-          const errorMessagesArray = pattern5Match[1].split("\n")
-          for(var i=0; i<errorMessagesArray.length; i++){
-            errorMessagesArray[i] = `<p>${i+1}) ${errorMessagesArray[i]}</p>`
-          }
-          console.log("===========")
-          console.log(errorMessagesArray)
-          
-          for (const error of errorMessagesArray){
-            document.getElementById('errorMsg').innerHTML += `<b>${error}</b>`
-          }
-      }else{
-          document.getElementById('errorMsg').innerHTML = `<b>${content}</b>`
-      }  
-      
-    }
+    
     
 
     /*If the error is created by an invalid key, this will get the key where the error
@@ -194,6 +170,7 @@ function App() {
 
     var jsonStringg = JSON.stringify(jsonAfterLoop, null, 2); // 2 is the number of spaces for indentation
 
+    var numArr = [];
     if (jsonStringg){
         let linesArr = jsonStringg.split("\n");
 
@@ -201,12 +178,40 @@ function App() {
           if (linesArr[i].includes("$$")){
             linesArr[i] = linesArr[i].replace("$$", "");
             linesArr[i] = `<span className="line">${linesArr[i]}</span>`;
+            numArr.push(i+1);
 
           }
         }
         let modifiedJsonStringg = linesArr.join("\n");
         document.getElementById('content').innerHTML = `<pre>${modifiedJsonStringg}</pre>`;
-        }
+    }
+
+    //Displaying the error messages  ---------------------------------------------------------------------------------   
+    if (!content){
+      document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
+      return;
+    }else{
+      document.getElementById('errorMsg').innerHTML  = ""; //removes the previous content
+
+      var pattern5 = /'health\.fhir\.r4\.international401:Patient':\s*([\s\S]*)/;
+      const pattern5Match = content.match(pattern5)
+
+      if (pattern5Match !== null){
+          const errorMessagesArray = pattern5Match[1].split("\n")
+          for(var i=0; i<errorMessagesArray.length; i++){
+            errorMessagesArray[i] = `<p>${i+1}) At line ${numArr[i]}: ${errorMessagesArray[i]} </p>`
+          }
+          console.log("===========")
+          console.log(errorMessagesArray)
+          
+          for (const error of errorMessagesArray){
+            document.getElementById('errorMsg').innerHTML += `<b>${error}</b>`
+          }
+      }else{
+          document.getElementById('errorMsg').innerHTML = `<b>${content}</b>`
+      }  
+      
+    }
 
 };
 
