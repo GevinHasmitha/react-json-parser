@@ -1,4 +1,4 @@
-span{
+.line{
   background-color: red;
 }
 form button{
@@ -12,14 +12,20 @@ form button{
 
 }
 
-#content{
-  /* padding: 0 20px 0 20px; */
-}
-
 #errorMsg{
   width: 30%;;
   display: flex;
   flex-direction:column;
   justify-content: center;
   
+}
+
+.first-line{
+  background-color: red;
+}
+.line-color{
+  background-color: blue;
+}
+.codeMirror{
+  border: 1px solid rgb(220, 220, 220);
 }

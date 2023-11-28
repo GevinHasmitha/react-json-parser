@@ -1,12 +1,18 @@
 import './App.css';
 import React, { useState } from 'react';
+import CodeMirror from '@uiw/react-codemirror';
+import { classname } from '@uiw/codemirror-extensions-classname';
+import { json } from '@codemirror/lang-json';
 
 function App() {
   const [value, setValue] = useState('');
+  var errorLines = [];
+  // const [submitted, setSubmitted] = useState(false);
+  const [extensions, setExtensions] = useState([json({ jsx: true })]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    document.getElementById('content').innerHTML = "";  //removes the previous content
+    // document.getElementById('content').innerHTML = "";  //removes the previous content
 
     var userInputJson;
     try{
@@ -34,7 +40,7 @@ function App() {
 
     /*If the error is created by an invalid key, this will get the key where the error
     is from the error message, then this key can be used as the search string by the addPrefixToMatchingKey function*/
-        const pattern1 = /field\s+'([^']+)'/g;
+    const pattern1 = /field\s+'([^']+)'/g;
     const pattern1Match = content.matchAll(pattern1);
 
     var fieldValue = [];
@@ -49,34 +55,37 @@ function App() {
 
 
     /*If the error is created by a value, below code is used to navigate to that field. Then it will directly 
-      add $$ to that value so calling the addPrefixToMatchingKey function is not needed (this can be done because if the error
+      add $$ to that value, so calling the addPrefixToMatchingKey function is not needed (this can be done because if the error
       is with a value, the error message will contain the path, if it is with a key, we have to use the 
       addPrefixToMatchingKey function to search for the location of the key in the json)*/
+    const _ = require('lodash');  //Had to use a library because value can also be nested several levels deep
+
     if (fieldValue){
-        //Eg; if fieldValue is telecom[1].system, this regular expression will return an array ["telecom", 1, "system"]
-        var pattern2 = /(\w+)\[(\d+)\]\.(\w+)/;
-        // Use the pattern to match and extract values
+      console.log("fieldValue = ", fieldValue);
         try {
           for (const fieldvalue of fieldValue){
-              var match = fieldvalue.match(pattern2);
+            const patternz = /\w+\[\d+\].*/;   //If this matches we know there is a value error
+            if (fieldvalue.match(patternz)){
 
-              if (match !== null) {
-                //Navigating to the value in the JSON object
-                const currentValue = userInputJson[match[1]][match[2]][match[3]];
-                console.log("currentValue = ", currentValue);
-
-                const modifiedValue = "$$" + currentValue;
-                console.log("modifiedValue = ", modifiedValue);
-
-                // Update the value in the JSON object
-                userInputJson[match[1]][match[2]][match[3]] = modifiedValue;
-              }
-        }
+               // Get the current value
+              const currentValue = _.get(userInputJson, fieldvalue);
+              console.log("currentValue = ", currentValue);
+      
+              // Modify the value
+              const modifiedValue = "$$" + currentValue;
+              console.log("modifiedValue = ", modifiedValue);
+      
+              // Set the new value
+              _.set(userInputJson, fieldvalue, modifiedValue);  //Appending $$ to the key cant be done because keys are immutable so have to create a new key and append it to the json
+            }else{
+              continue;
+            }
+           
+          }
         } catch (error) {
           console.error(error);
         }
-      }
-
+    }
 
     //Resource type validation------------------------------------------------------
 
@@ -170,38 +179,45 @@ function App() {
 
     var jsonStringg = JSON.stringify(jsonAfterLoop, null, 2); // 2 is the number of spaces for indentation
 
+
+
     var numArr = [];
     if (jsonStringg){
-        let linesArr = jsonStringg.split("\n");
+     let linesArr = jsonStringg.split("\n");
+ 
+     for (let i = 0; i < linesArr.length; i++){
+       if (linesArr[i].includes("$$")){
+         linesArr[i] = linesArr[i].replace("$$", "");
+         numArr.push(i+1);
+         errorLines.push(i);
+ 
+       }
+     }
+     let modifiedJsonStringg = linesArr.join("\n");
+    //  document.getElementById('content').innerHTML = `<pre>${modifiedJsonStringg}</pre>`;
+     setValue(modifiedJsonStringg);
+ }
 
-        for (let i = 0; i < linesArr.length; i++){
-          if (linesArr[i].includes("$$")){
-            linesArr[i] = linesArr[i].replace("$$", "");
-            linesArr[i] = `<span className="line">${linesArr[i]}</span>`;
-            numArr.push(i+1);
-
-          }
-        }
-        let modifiedJsonStringg = linesArr.join("\n");
-        document.getElementById('content').innerHTML = `<pre>${modifiedJsonStringg}</pre>`;
-    }
 
     //Displaying the error messages  ---------------------------------------------------------------------------------   
     if (!content){
+      setExtensions([ json({ jsx: true })]);  //Hides the line highlights when succesful
       document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
       return;
     }else{
       document.getElementById('errorMsg').innerHTML  = ""; //removes the previous content
+      setExtensions([classnameExt, json({ jsx: true })]);  //Highlights the lines when having errors
 
-      var pattern5 = /'health\.fhir\.r4\.international401:Patient':\s*([\s\S]*)/;
+      // var pattern5 = /'health\.fhir\.r4\.international401:Patient':\s*([\s\S]*)/;
+      var pattern5 = /'health\.fhir\.r4\.international401:\w+':\s*([\s\S]*)/;
       const pattern5Match = content.match(pattern5)
+      console.log(pattern5Match)
 
       if (pattern5Match !== null){
           const errorMessagesArray = pattern5Match[1].split("\n")
           for(var i=0; i<errorMessagesArray.length; i++){
             errorMessagesArray[i] = `<p>${i+1}) At line ${numArr[i]}: ${errorMessagesArray[i]} </p>`
           }
-          console.log("===========")
           console.log(errorMessagesArray)
           
           for (const error of errorMessagesArray){
@@ -213,16 +229,54 @@ function App() {
       
     }
 
+   // -------------------------------------------------------------------------------------------------------------
+   
+
+   
+
 };
+
+
+const classnameExt = classname({
+  add: (lineNumber) => {
+    for (const line of errorLines){
+      if (line === lineNumber-1) {
+
+        console.log(lineNumber);
+        return 'first-line';
+      }
+    }
+
+  },
+});
+
+//const extensions = submitted ? [classnameExt, json({ jsx: true })] : [json({ jsx: true })];
 
   return (
     <div className="App">
+
       <div className='container'>
         <form onSubmit={handleSubmit}>
-          <textarea value={value} onChange={(event) => setValue(event.target.value)} rows={28} cols={40} />
+          <CodeMirror
+          className='codeMirror'
+            value={value}
+            height="400px"
+            width='500px'
+            placeholder="Enter your FHIR resource here"
+            // extensions={[classnameExt, json({ jsx: true })]} 
+            extensions={extensions}
+            onChange={(value) => {
+              setValue(value);
+              if(value===""){
+                setExtensions([ json({ jsx: true })]);
+              }
+            }}
+            theme="light"
+            
+          />
           <button >Submit</button>
         </form>
-        <div id='content'></div>     
+        {/* <div id='content'></div>      */}
         <div id='errorMsg'></div>    
       </div>
     </div>
