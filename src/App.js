@@ -35,13 +35,14 @@ function App() {
     console.log(content); 
 
     
-    var missingValues = [];
+    var missingFields = [];     //This will store the missing field names
 
+    //Checking for missing field errors
     const pattern0 = /missing required field '([^']+)'/g;
     const pattern0Match = content.matchAll(pattern0);
     for(const match of pattern0Match){
       if (match && match.length ===2){
-        missingValues.push(match[1]);
+        missingFields.push(match[1]);
       }else{
         console.log("No missing fields");
       }
@@ -52,7 +53,7 @@ function App() {
       console.log(content)
     
 
-    /*If the error is created by an invalid key, this will get the key where the error
+    /*If the error is created by an invalid key/field, this will get the key where the error
     is from the error message, then this key can be used as the search string by the addPrefixToMatchingKey function*/
     const pattern1 = /field\s+'([^']+)'/g;
     const pattern1Match = content.matchAll(pattern1);
@@ -173,11 +174,6 @@ function App() {
       return obj;
     }
 
-
-    for (const val of fieldValue){
-      console.log(val)
-    }
-
     var jsonAfterLoop;
     for (const field of fieldValue){
       jsonAfterLoop= addPrefixToMatchingKey(userInputJson,field);
@@ -206,7 +202,7 @@ function App() {
 
 
     //Displaying the error messages  ---------------------------------------------------------------------------------   
-    if (!content && missingValues.length === 0){
+    if (!content && missingFields.length === 0){
       setExtensions([ json({ jsx: true })]);  //Hides the line highlights when succesful
       document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
       return;
@@ -215,8 +211,8 @@ function App() {
       setExtensions([classnameExt, json({ jsx: true })]);  //Highlights the lines when having errors
 
       
-      if (missingValues.length !== 0){
-        for (const missingValue of missingValues){
+      if (missingFields.length !== 0){
+        for (const missingValue of missingFields){
           document.getElementById('errorMsg').innerHTML += `<b><p>Missing required field: ${missingValue}</p></b>`
         }
       }
@@ -254,7 +250,7 @@ const classnameExt = classname({
       if (line === lineNumber-1) {
 
         console.log(lineNumber);
-        return 'first-line';
+        return 'errorMarker';
       }
     }
 
