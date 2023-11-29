@@ -7,7 +7,6 @@ import { json } from '@codemirror/lang-json';
 function App() {
   const [value, setValue] = useState('');
   var errorLines = [];
-  // const [submitted, setSubmitted] = useState(false);
   const [extensions, setExtensions] = useState([json({ jsx: true })]);
 
   const handleSubmit = async (event) => {
@@ -31,17 +30,33 @@ function App() {
         body: JSON.stringify(userInputJson), 
     };
     const response = await fetch('http://localhost:9090/sampleResource', data);
-    const content = await response.text(); 
+    var content = await response.text(); 
     console.log("Error message from server");
     console.log(content); 
 
     
+    var missingValues = [];
+
+    const pattern0 = /missing required field '([^']+)'/g;
+    const pattern0Match = content.matchAll(pattern0);
+    for(const match of pattern0Match){
+      if (match && match.length ===2){
+        missingValues.push(match[1]);
+      }else{
+        console.log("No missing fields");
+      }
+    }
+    //Removed the errors related to missing fields from the original error message so they can be handled seperately
+      const removeMsg = /missing required field.*\n?/g;
+      content = content.replace(removeMsg, '');
+      console.log(content)
     
 
     /*If the error is created by an invalid key, this will get the key where the error
     is from the error message, then this key can be used as the search string by the addPrefixToMatchingKey function*/
     const pattern1 = /field\s+'([^']+)'/g;
     const pattern1Match = content.matchAll(pattern1);
+    console.log(pattern1Match);
 
     var fieldValue = [];
     for (const match of pattern1Match){
@@ -163,20 +178,11 @@ function App() {
       console.log(val)
     }
 
-    // const originalJSON = JSON.stringify(userInputJson)
-    // console.log("------Original object--------");
-    // console.log(originalJSON);
-
-
     var jsonAfterLoop;
     for (const field of fieldValue){
       jsonAfterLoop= addPrefixToMatchingKey(userInputJson,field);
       userInputJson = jsonAfterLoop;
     }
-    // const strAfterLoop = JSON.stringify(jsonAfterLoop)
-    // console.log("------FInal object--------");
-    // console.log(strAfterLoop);
-
     var jsonStringg = JSON.stringify(jsonAfterLoop, null, 2); // 2 is the number of spaces for indentation
 
 
@@ -200,7 +206,7 @@ function App() {
 
 
     //Displaying the error messages  ---------------------------------------------------------------------------------   
-    if (!content){
+    if (!content && missingValues.length === 0){
       setExtensions([ json({ jsx: true })]);  //Hides the line highlights when succesful
       document.getElementById('errorMsg').innerHTML = `<b>Validation successful</b>`
       return;
@@ -208,23 +214,28 @@ function App() {
       document.getElementById('errorMsg').innerHTML  = ""; //removes the previous content
       setExtensions([classnameExt, json({ jsx: true })]);  //Highlights the lines when having errors
 
-      // var pattern5 = /'health\.fhir\.r4\.international401:Patient':\s*([\s\S]*)/;
+      
+      if (missingValues.length !== 0){
+        for (const missingValue of missingValues){
+          document.getElementById('errorMsg').innerHTML += `<b><p>Missing required field: ${missingValue}</p></b>`
+        }
+      }
+
       var pattern5 = /'health\.fhir\.r4\.international401:\w+':\s*([\s\S]*)/;
       const pattern5Match = content.match(pattern5)
+      console.log("=======")
       console.log(pattern5Match)
 
-      if (pattern5Match !== null){
+      if (pattern5Match !== null && pattern5Match[1] !== ""){
           const errorMessagesArray = pattern5Match[1].split("\n")
           for(var i=0; i<errorMessagesArray.length; i++){
-            errorMessagesArray[i] = `<p>${i+1}) At line ${numArr[i]}: ${errorMessagesArray[i]} </p>`
-          }
-          console.log(errorMessagesArray)
-          
+            errorMessagesArray[i] = `Line ${numArr[i]}) ${errorMessagesArray[i]} `
+          }        
           for (const error of errorMessagesArray){
-            document.getElementById('errorMsg').innerHTML += `<b>${error}</b>`
+            document.getElementById('errorMsg').innerHTML += `<b><p>${error}<p></b>`
           }
       }else{
-          document.getElementById('errorMsg').innerHTML = `<b>${content}</b>`
+          document.getElementById('errorMsg').innerHTML += `<b>${content}</b>`
       }  
       
     }
@@ -250,7 +261,7 @@ const classnameExt = classname({
   },
 });
 
-//const extensions = submitted ? [classnameExt, json({ jsx: true })] : [json({ jsx: true })];
+
 
   return (
     <div className="App">
