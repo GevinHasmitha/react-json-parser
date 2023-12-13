@@ -53,8 +53,9 @@ function App() {
     if (fieldValue) {
       try {
         for (const fieldvalue of fieldValue) {
-          const pattern = /\w+\[\d+\].*/; //If this matches we know there is a value error
-          if (fieldvalue.match(pattern)) {
+          const pattern = /\w+\[\d+\].*/; //If this matches we know there is a value error  (matches for sampleword[].)
+          const pattern2 = /\w+\..*/;     //eg; (matches for sampleword. )
+          if (fieldvalue.match(pattern) || fieldvalue.match(pattern2)) {
             // Get the current value
             const currentValue = _.get(userInputJson, fieldvalue);
             // Modify the value
