@@ -9,87 +9,78 @@ function App() {
   const [extensions, setExtensions] = useState([json({ jsx: true })]);
   var errorLines = [];
 
-  function getMissingFields(content) {
-    //Checking for missing field errors
-    const pattern = /missing required field '([^']+)'/g;
-    const patternMatch = content.matchAll(pattern);
-
-    const missingFields = [];
-    for (const match of patternMatch) {
-      if (match && match.length === 2) {
-        missingFields.push(match[1]);
-      } else {
-        console.log("No missing fields");
+  function checkForMissingFields(errorData) {
+    for (let data of errorData){
+      let pattern = /missing required field '([^']+)'/;
+      const patternMatch = data.match(pattern);
+      if (patternMatch && patternMatch.length === 2){
+        console.log(patternMatch[1]);
+        return true;
+      }else{
+        return false;
       }
     }
-    return missingFields;
   }
 
-  function getInvalidFields(content) {
-    /*If the error is created by an invalid key/field, this will get the key where the error
-    is from the error message, then this key can be used as the search string by the addPrefixToMatchingKey function*/
-    const pattern = /field\s+'([^']+)'/g;
-    const patternMatch = content.matchAll(pattern);
-
-    let fieldValue = [];
-    for (const match of patternMatch) {
-      if (match && match.length === 2) {
-        fieldValue.push(match[1]);
-        console.log(`Field Value  ${fieldValue}`);
-      } else {
-        console.log("No match found.");
+  function validateInvalidFields(errorData,userInputJson){
+    console.log("Invalid Fields---------------------------")
+    for (let data of errorData){
+      let pattern = /Invalid field '([^']*)'/;
+      const patternMatch = data.match(pattern);
+      if (patternMatch && patternMatch.length === 2){
+       console.log(patternMatch[1]);
+       userInputJson = addPrefixToMatchingKey(userInputJson, patternMatch[1]);
       }
     }
-    return fieldValue;
+    return userInputJson;
   }
 
-  function modifyInvalidValues(userInputJson, fieldValue) {
+  function validateInvalidValues(errorData, userInputJson){
+    console.log("Invalid Value---------------------------")
+    for (let data of errorData){
+      let pattern = /Invalid value of field '([^']*)'/;
+      const patternMatch = data.match(pattern);
+      if (patternMatch && patternMatch.length === 2){
+       console.log(patternMatch[1]);
+        modifyInvalidValues(userInputJson, patternMatch[1]);
+      }
+     }
+  }
+
+  function validateDateTime(errorData,userInputJson) {
+    for (let data of errorData){
+      let pattern =/Invalid pattern \(constraint\) for field '([^']*)'/;
+      const patternMatch = data.match(pattern);
+      if (patternMatch && patternMatch.length === 2){
+        console.log("zzzzzzzzzzzzzzzzzzzz");
+       console.log(patternMatch[1]);
+       userInputJson = addPrefixToMatchingKey(userInputJson, patternMatch[1]);
+      }
+     }
+     return userInputJson;
+    }
+
+
+  function modifyInvalidValues(userInputJson, fieldvalue) {
     /*If the error is created by a value, below code is used to navigate to that field. Then it will directly 
       add $$ to that value, so calling the addPrefixToMatchingKey function is not needed (this can be done because if the error
       is with a value, the error message will contain the path, if it is with a key, we have to use the 
       addPrefixToMatchingKey function to search for the location of the key in the json)*/
     const _ = require("lodash"); //Had to use a library because value can also be nested several levels deep
 
-    if (fieldValue) {
+    if (fieldvalue) {
       try {
-        for (const fieldvalue of fieldValue) {
-          const pattern = /\w+\[\d+\].*/; //If this matches we know there is a value error  (matches for sampleword[].)
-          const pattern2 = /\w+\..*/;     //eg; (matches for sampleword. )
-          if (fieldvalue.match(pattern) || fieldvalue.match(pattern2)) {
             // Get the current value
             const currentValue = _.get(userInputJson, fieldvalue);
+            console.log("Current value: " + currentValue);
+            console.log(JSON.stringify(userInputJson))
             // Modify the value
             const modifiedValue = "$$" + currentValue;
             // Set the new value
             _.set(userInputJson, fieldvalue, modifiedValue); //Appending $$ to the key cant be done because keys are immutable so have to create a new key and append it to the json
-          } else {
-            continue;
-          }
-        }
       } catch (error) {
         console.error(error);
       }
-    }
-  }
-
-  function validateResourceType(content, fieldValue) {
-    /*This will search error for below string and if there is a match the
-      error is with the resourceType field*/
-    let pattern = /(Failed to find FHIR profile for the resource type)/;
-    const patternMatch = content.match(pattern);
-
-    if (patternMatch && patternMatch.length === 2) {
-      fieldValue.push("resourceType");
-      console.log(`Field Value : ${fieldValue}`);
-    }
-  }
-
-  function validateDateTime(content, fieldValue) {
-    let pattern = /\$\.(\w+):pattern/g;
-    const patternMatch = content.matchAll(pattern);
-
-    for (const match of patternMatch) {
-      fieldValue.push(match[1]);
     }
   }
 
@@ -133,13 +124,8 @@ function App() {
     return obj;
   }
 
-  function findErrorLines(userInputJson, fieldValue, errorLines) {
-    let jsonAfterLoop;
-    for (const field of fieldValue) {
-      jsonAfterLoop = addPrefixToMatchingKey(userInputJson, field);
-      userInputJson = jsonAfterLoop;
-    }
-    let jsonStringg = JSON.stringify(jsonAfterLoop, null, 2); // 2 is the number of spaces for indentation
+  function findErrorLines(userInputJson, errorLines) {
+    let jsonStringg = JSON.stringify(userInputJson, null, 2); // 2 is the number of spaces for indentation
 
     //Finds error locations by getting the line numbers where $$ is present
     if (jsonStringg) {
@@ -157,41 +143,31 @@ function App() {
     }
   }
 
-  function displayErrorMessages(content, missingFields, errorLines) {
-    if (!content && missingFields.length === 0) {
-      document.getElementById(
-        "errorMsg"
-      ).innerHTML = `<b>Validation successful</b>`;
-      return;
-    } else {
-      document.getElementById("errorMsg").innerHTML = ""; //removes the previous content
+  function displayErrorMessages(errorData) {
+    document.getElementById("errorMsg").innerHTML  = ``;
 
-      if (missingFields.length !== 0) {
-        for (const missingValue of missingFields) {
-          document.getElementById(
-            "errorMsg"
-          ).innerHTML += `<b><p>Missing required field: ${missingValue}</p></b>`;
-        }
-      }
-
-      let pattern = /'health\.fhir\.r4\.international401:\w+':\s*([\s\S]*)/;
-      const patternMatch = content.match(pattern);
-
-      if (patternMatch !== null && patternMatch[1] !== "") {
-        const errorMessagesArray = patternMatch[1].split("\n");
-        for (let i = 0; i < errorMessagesArray.length; i++) {
-          errorMessagesArray[i] = `Line ${errorLines[i]+1}) ${errorMessagesArray[i]} `;
-        }
-        for (const error of errorMessagesArray) {
-          document.getElementById(
-            "errorMsg"
-          ).innerHTML += `<b><p>${error}<p></b>`;
-        }
+    let j=0;
+    for(let i=0; i< errorData.length; i++){
+      if (
+        errorData[i].includes("Missing required field") ||
+        errorData[i].includes("Resource type is invalid") ||
+        errorData[i].includes("Missing required Element") ||
+        errorData[i].includes("may be missing or invalid or it's value invalid")
+      ) {
+        document.getElementById(
+          "errorMsg"
+        ).innerHTML += `<b>${errorData[i]}<br><br><b>`;
       } else {
-        document.getElementById("errorMsg").innerHTML += `<b>${content}</b>`;
+        document.getElementById("errorMsg").innerHTML += `<b>Line ${
+          errorLines[j] + 1
+        }) ${errorData[i]}<br><br><b>`;
+        j++;
       }
     }
   }
+
+
+
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -217,45 +193,53 @@ function App() {
     try {
       const response = await fetch("http://localhost:9090/sampleResource", data);
       content = await response.text();
-      console.log("Error message from server : " + content);
+      if (content.length === 0){
+        console.log("Validation successful");
+        setExtensions([json({ jsx: true })]);
+        document.getElementById("errorMsg").innerHTML = `<b>Validation Successful<b>`;
+        return;
+      }else{
+        console.log("Error message from server : " + content);
+      }
+      
     } catch (error) {
       console.error('There was a problem with the fetch operation: ', error);
       return;
     }
 
-    //Get the missing field names (if any)
-    const missingFields = getMissingFields(content);
+    let errorData=[];
+    if (content) { 
+       errorData = Object.values(JSON.parse(content));
+    }
+    console.log(errorData)
 
-    //Removed the errors related to missing fields from the original error message so they can be handled seperately
-    const removeMsg = /missing required field.*\n?/g;
-    content = content.replace(removeMsg, "");
-    console.log("+++++++++++")
-    console.log(content);
+    //Need to see whether there are any missing fields for highlihting purposes
+    const missingFields = checkForMissingFields(errorData);
 
-    //Gets the field names where there are errors
-    const fieldValue = getInvalidFields(content);
+    userInputJson = validateInvalidFields(errorData, userInputJson);
+     
+    validateInvalidValues(errorData, userInputJson);
 
-    //If the error is created by a value, this will add $$ to that value
-    modifyInvalidValues(userInputJson, fieldValue);
+    userInputJson = validateDateTime(errorData, userInputJson);
 
-    //Resource type validation
-    validateResourceType(content, fieldValue);
 
-    /*Parsing for dateTime errors*/
-    validateDateTime(content, fieldValue);
-
+    console.log(JSON.stringify(userInputJson));
     //Finds error locations by getting the line numbers where $$ is present
-    findErrorLines(userInputJson, fieldValue, errorLines);
+    findErrorLines(userInputJson, errorLines);
+    console.log(errorLines);
+
+   
 
     //Highlighting the lines with errors
-    if (!content && missingFields.length === 0) {
+    if (!content && missingFields === false) {
       setExtensions([json({ jsx: true })]); //Hides the line highlights when succesful
     } else {
       setExtensions([classnameExt, json({ jsx: true })]); //Highlights the lines when having errors
     }
 
-    displayErrorMessages(content, missingFields, errorLines);
-  };
+     displayErrorMessages(errorData);
+
+   };
 
   const classnameExt = classname({
     add: (lineNumber) => {
@@ -267,7 +251,7 @@ function App() {
     },
   });
 
-  return (
+  return ( 
     <div className="App">
       <div className="container">
         <form onSubmit={handleSubmit}>
